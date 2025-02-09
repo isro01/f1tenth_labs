@@ -65,6 +65,7 @@ private:
             {
                 sum += ranges[i + j];
             }
+            // This will be accompanies with following centre of gap instead of max dist point
             // if (sum / window_size > 3.0)
             // {
             //     sum = window_size*3.0;
