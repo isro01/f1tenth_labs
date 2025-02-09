@@ -51,8 +51,8 @@ private:
     // float robs = 0.2; // radius of robot
     float robs = 0.3; // map2
     int remove_thresh = 20; // not used right now
-    int disparity_thresh = 1.25; // threshold to identify disparity point
-    float disparity_extender_length = 0.5; // length extended from disparity
+    int disparity_thresh = 1.50; // threshold to identify disparity point
+    float disparity_extender_length = 0.25; // length extended from disparity
     // float disparity_extender_length = 0.3; // map2
 
     
