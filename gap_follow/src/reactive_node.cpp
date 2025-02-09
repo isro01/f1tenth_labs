@@ -37,16 +37,16 @@ private:
     int fortyfive_idx = 180; // calc by printing once
     int N = 1040;
     int min_idx = 0;
-    // float robs = 0.2; // radius of robot
-    float robs = 0.1;
+    float robs = 0.2; // radius of robot
+    // float robs = 0.1;
     std::vector<std::pair<int, int>> gap_indices;
     int max_gap_begin_idx = 0;
     int max_gap_end_idx = 0;
     int remove_thresh = 20;
     int piecewise_speed = 0;
     int disparity_thresh = 1.0;
-    // float disparity_extender_length = 0.5;
-    float disparity_extender_length = 0.3;
+    float disparity_extender_length = 0.5;
+    // float disparity_extender_length = 0.3;
     float step_angle=0;
     std::vector<std::tuple<int, int, float>> disparity_indices;
 
@@ -57,6 +57,12 @@ private:
         // 1.Setting each value to the mean over some window
         // 2.Rejecting high values (eg. > 3m)
         processed_ranges.clear();
+
+        // for (int i=0;i<N;i++){
+        //     if (ranges[i] > 3.0){
+        //         ranges[i] = 3.0;
+        //     }
+        // }
 
         for (int i = (fortyfive_idx ); i < ( N - fortyfive_idx ); i++)
         {
@@ -98,17 +104,17 @@ private:
         if (disparity_indices.size() == 0){
             return;
         }
-        std::cout << "Found " << disparity_indices.size() << " disparities" << std::endl;
+        // std::cout << "Found " << disparity_indices.size() << " disparities" << std::endl;
 
         for (int j=0;j<disparity_indices.size();j++) {
             
-            std::cout << "shorter length is: " << std::get<2>(disparity_indices[j]) << std::endl;
+            // std::cout << "shorter length is: " << std::get<2>(disparity_indices[j]) << std::endl;
             // std::cout << "Angle theta is: " <<  << std::endl;
             float disp_angle = disparity_extender_length / std::get<2>(disparity_indices[j]);
 
             int extending_idxs = disp_angle / step_angle;
 
-            std::cout << "Extending " << extending_idxs << " indexes" << std::endl;
+            // std::cout << "Extending " << extending_idxs << " indexes" << std::endl;
 
             if (std::get<1>(disparity_indices[j]) == 0) // extend towards right
             {
@@ -173,8 +179,8 @@ private:
                 min_idx = i;
             }
         }
-        float angle = (180/M_PI_2) * corresp_angles_radians[fortyfive_idx + min_idx];
-        std::cout << "The min distance is at: " << angle << " and the value is: " << processed_ranges[min_idx] << std::endl;
+        // float angle = (180/M_PI) * corresp_angles_radians[fortyfive_idx + min_idx];
+        // std::cout << "The min distance is at: " << angle << " and the value is: " << processed_ranges[min_idx] << std::endl;
 
 
         // Eliminate all points inside 'bubble' (set them to zero) 
@@ -200,8 +206,8 @@ private:
         }
         gap_indices.push_back(std::make_pair(begin_idx, end_idx));
         
+        // this is the biggest bap
         int gap_length = 0;
-        
         for(int j=0;j<gap_indices.size();j++){
             // std::cout << "Gap " << j << " is from: " << gap_indices[j].first << " to " << gap_indices[j].second << std::endl;
             if ((gap_indices[j].second - gap_indices[j].first) > gap_length){
@@ -211,14 +217,37 @@ private:
             }
         }
 
-        // Find the best point in the gap 
+        // this is the deepest gap
+        // int deepest_gap_start_idx = 0;
+        // int deepest_gap_end_idx = 0;
+        // float max_depth = 0.0;
+        // for (int k = 0;k<gap_indices.size();k++){
+        //     float depth = *std::max_element(processed_ranges.begin() + gap_indices[k].first, processed_ranges.begin() + gap_indices[k].second);
+
+        //     if (gap_indices[k].second - gap_indices[k].first < 10) {
+        //         continue;
+        //     }
+            
+        //     std::cout << "Depth of gap " << k << " is: " << depth << std::endl;
+
+        //     if (depth > max_depth){
+        //         deepest_gap_start_idx = gap_indices[k].first;
+        //         deepest_gap_end_idx = gap_indices[k].second;
+        //         max_depth = depth;
+        //     }
+        // }
+        // std::cout << "The gap is from " << deepest_gap_start_idx << " to " << deepest_gap_end_idx << std::endl;
         
+
+        // Find the best point in the gap 
         int best_point_idx = 0;
         for (int i = max_gap_begin_idx; i < max_gap_end_idx; i++){
             if (processed_ranges[i] > processed_ranges[best_point_idx]){
                 best_point_idx = i;
             }
         }
+        // best_point_idx = deepest_gap_start_idx + (deepest_gap_end_idx - deepest_gap_start_idx)/2;
+        
         std::cout << "Best point index is: " << best_point_idx << " and value is: " << processed_ranges[best_point_idx] << std::endl;
         // int left_sum = 0;
         // int right_sum = 0;
@@ -244,17 +273,17 @@ private:
         
         // Publish Drive message
         if (processed_ranges[best_point_idx] > 5.0){
-            piecewise_speed = 2.0;
+            piecewise_speed = 4.0;
         } 
         else if (processed_ranges[best_point_idx] < 5.0 && processed_ranges[best_point_idx] > 1.5){
-            piecewise_speed = 1.0;
+            piecewise_speed = 2.0;
         }
         else{
             piecewise_speed = 0.5;
         }
         best_point_idx += fortyfive_idx; // offset by 45 degrees
         float steering_angle = corresp_angles_radians[best_point_idx]; // radians
-        // std::cout << "Steering angle is: " << steering_angle*(180/M_PI) << std::endl;
+        std::cout << "Steering angle is: " << steering_angle*(180/M_PI) << std::endl;
         auto drive_msg = ackermann_msgs::msg::AckermannDriveStamped();
         drive_msg.drive.steering_angle = steering_angle;
         // drive_msg.drive.speed = 2.0;
