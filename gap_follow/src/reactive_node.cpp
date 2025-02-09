@@ -37,14 +37,14 @@ private:
     int fortyfive_idx = 180; // calc by printing once
     int N = 1040;
     int min_idx = 0;
-    float robs = 0.2; // radius of robot
-    // float robs = 0.1;
+    // float robs = 0.2; // radius of robot
+    float robs = 0.1;
     std::vector<std::pair<int, int>> gap_indices;
     int max_gap_begin_idx = 0;
     int max_gap_end_idx = 0;
     int remove_thresh = 20;
     int piecewise_speed = 0;
-    int disparity_thresh = 1.0;
+    int disparity_thresh = 1.5;
     float disparity_extender_length = 0.5;
     // float disparity_extender_length = 0.3;
     float step_angle=0;
@@ -273,10 +273,10 @@ private:
         
         // Publish Drive message
         if (processed_ranges[best_point_idx] > 5.0){
-            piecewise_speed = 4.0;
+            piecewise_speed = 2.0;
         } 
         else if (processed_ranges[best_point_idx] < 5.0 && processed_ranges[best_point_idx] > 1.5){
-            piecewise_speed = 2.0;
+            piecewise_speed = 1.0;
         }
         else{
             piecewise_speed = 0.5;
