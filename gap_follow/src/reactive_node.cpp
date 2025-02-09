@@ -29,26 +29,31 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr laser_sub_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
 
-    std::vector<float> laser_readings;
-    std::vector<float> corresp_angles_radians;
-    int window_size = 5;
-    std::vector<float> processed_ranges;
-    std::vector<float> disparity_ranges;
-    int fortyfive_idx = 180; // calc by printing once
-    int N = 1040;
-    int min_idx = 0;
+    // storing laser scan data
+    std::vector<float> laser_readings; //direct from sub
+    std::vector<float> corresp_angles_radians; // corresponding angles
+    std::vector<float> disparity_ranges; //post disparity extender
+    std::vector<float> processed_ranges; //post processing
+    std::vector<std::pair<int, int>> gap_indices; // start and end indices of gaps
+    std::vector<std::tuple<int, int, float>> disparity_indices; // <disparity index, direction, length> // direction to extend: 0 - right, 1 - left
+
+    // constants
+    int fortyfive_idx = 180; // calc by printing once - quadrants
+    int N = 1040; // size of laser scan array
+    float step_angle=0; // angle increment value in laser scan
+    int min_idx = 0; // index of the closest point to lidar
+    int max_gap_begin_idx = 0; // index of the start of the max gap
+    int max_gap_end_idx = 0; // index of the end of the max gap
+    float piecewise_speed = 0; // speed of the car
+
+    // tunable parameters
+    int window_size = 1; // size of the moving average window
     // float robs = 0.2; // radius of robot
-    float robs = 0.1;
-    std::vector<std::pair<int, int>> gap_indices;
-    int max_gap_begin_idx = 0;
-    int max_gap_end_idx = 0;
-    int remove_thresh = 20;
-    int piecewise_speed = 0;
-    int disparity_thresh = 1.5;
-    float disparity_extender_length = 0.5;
-    // float disparity_extender_length = 0.3;
-    float step_angle=0;
-    std::vector<std::tuple<int, int, float>> disparity_indices;
+    float robs = 0.3; // map2
+    int remove_thresh = 20; // not used right now
+    int disparity_thresh = 1.25; // threshold to identify disparity point
+    float disparity_extender_length = 0.5; // length extended from disparity
+    // float disparity_extender_length = 0.3; // map2
 
     
     void preprocess_lidar(float* ranges)
@@ -71,11 +76,6 @@ private:
             {
                 sum += ranges[i + j];
             }
-            // This will be accompanies with following centre of gap instead of max dist point
-            // if (sum / window_size > 3.0)
-            // {
-            //     sum = window_size*3.0;
-            // }
             processed_ranges.push_back(sum / window_size);
         }
         return;
@@ -96,25 +96,24 @@ private:
                 {
                     disparity_indices.push_back(std::make_tuple(i, 0, ranges[i]));
                 }
-                else{
+                else
+                {
                     disparity_indices.push_back(std::make_tuple(i+1, 1, ranges[i+1]));
                 }
             }
         }
+        // if no gaps found, return
         if (disparity_indices.size() == 0){
             return;
         }
-        // std::cout << "Found " << disparity_indices.size() << " disparities" << std::endl;
 
+        // extend disparities by choosing directions
         for (int j=0;j<disparity_indices.size();j++) {
             
-            // std::cout << "shorter length is: " << std::get<2>(disparity_indices[j]) << std::endl;
-            // std::cout << "Angle theta is: " <<  << std::endl;
+            // using r*theta = d
+            // where r = dist to diisparity pt, theta = arc angle, d = length of extension
             float disp_angle = disparity_extender_length / std::get<2>(disparity_indices[j]);
-
             int extending_idxs = disp_angle / step_angle;
-
-            // std::cout << "Extending " << extending_idxs << " indexes" << std::endl;
 
             if (std::get<1>(disparity_indices[j]) == 0) // extend towards right
             {
@@ -131,7 +130,6 @@ private:
                 }
             }
         }
-            
         return;
     }
 
@@ -149,31 +147,46 @@ private:
         return;
     }
 
-    
+    void piecewise_speed_calc(float* ranges, int best_idx)
+    {
+        // Return speed of car based on the farthest distance we're aiming for
+        // can be deepet point in the max length gap or the deepest gap's center
+        std::cout << "value at best index is: " << ranges[best_idx] << std::endl;
+        if (ranges[best_idx] > 5.0){
+            piecewise_speed = 1.0;
+        } 
+        else if (ranges[best_idx] < 5.0 && ranges[best_idx] > 1.5){
+            piecewise_speed = 0.9;
+        }
+        else{
+            piecewise_speed = 0.3;
+        }
+        std::cout << "Piecewise speed is: " << piecewise_speed << std::endl;
 
+    }
+
+    
     void lidar_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) 
     {   
-        // Process each LiDAR scan as per the Follow Gap algorithm & publish an AckermannDriveStamped Message
-        
+        ///////////////////////////////////////////////////////////////////////////////////////// [STEP] Process each LiDAR scan as per the Follow Gap algorithm & publish an AckermannDriveStamped Message
+        ///////////////////////////////////////////////////////////////////////////////////////
+
         laser_readings = scan_msg->ranges;
         step_angle = scan_msg->angle_increment;
 
-        // display_ranges(laser_readings.data());
-        
+        // Getting all the corresponding angles for easy usage later - filled only once
         if (corresp_angles_radians.size() == 0){
             for (int i = 0; i < scan_msg->ranges.size(); i++)
             {
                 corresp_angles_radians.push_back(scan_msg->angle_min + i * scan_msg->angle_increment);
             }
         }
-        // int idx = M_PI_4 / scan_msg->angle_increment; // 45 degrees
-        
+
+        // First we extend the disparities and then process the LiDAR scan        
         disparity_extender(laser_readings.data());
         preprocess_lidar(disparity_ranges.data());
-        // disparity_extender();
 \
-        /// TODO:
-        // Find closest point to LiDAR
+        // [STEP] Find closest point to LiDAR
         for (int i=0;i<processed_ranges.size();i++){
             if (processed_ranges[i] < processed_ranges[min_idx]){
                 min_idx = i;
@@ -182,16 +195,23 @@ private:
         // float angle = (180/M_PI) * corresp_angles_radians[fortyfive_idx + min_idx];
         // std::cout << "The min distance is at: " << angle << " and the value is: " << processed_ranges[min_idx] << std::endl;
 
-
-        // Eliminate all points inside 'bubble' (set them to zero) 
+        ///////////////////////////////////////////////////////////////////////////////////////
+        // [STEP] Eliminate all points inside 'bubble' (set them to zero) 
+        ///////////////////////////////////////////////////////////////////////////////////////
+        
+        // calculated using geometry
+        // where r = shortest distance, theta = arc angle, d = radius of bubble
         float obs_theta = atan(robs / processed_ranges[min_idx]);
         int bubble_radius = obs_theta / scan_msg->angle_increment;
-        // std::cout << "Bubble radius is: " << bubble_radius << std::endl;
         for (int i = min_idx - bubble_radius; i < min_idx + bubble_radius; i++){
             processed_ranges[i] = 0.0;
         }
 
-        // Find max length gap 
+        ///////////////////////////////////////////////////////////////////////////////////////
+        // [STEP] Find max length gap 
+        ///////////////////////////////////////////////////////////////////////////////////////
+
+        // First we get all the gaps from processed_ranges
         int begin_idx = 0;
         int end_idx = 1;
         gap_indices.clear();
@@ -206,7 +226,7 @@ private:
         }
         gap_indices.push_back(std::make_pair(begin_idx, end_idx));
         
-        // this is the biggest bap
+        // [OPTION] this is the biggest bap
         int gap_length = 0;
         for(int j=0;j<gap_indices.size();j++){
             // std::cout << "Gap " << j << " is from: " << gap_indices[j].first << " to " << gap_indices[j].second << std::endl;
@@ -217,7 +237,7 @@ private:
             }
         }
 
-        // this is the deepest gap
+        // [OPTION] this is the deepest gap
         // int deepest_gap_start_idx = 0;
         // int deepest_gap_end_idx = 0;
         // float max_depth = 0.0;
@@ -238,8 +258,10 @@ private:
         // }
         // std::cout << "The gap is from " << deepest_gap_start_idx << " to " << deepest_gap_end_idx << std::endl;
         
+        ///////////////////////////////////////////////////////////////////////////////////////
+        // [STEP] Find the best point in the gap 
+        ///////////////////////////////////////////////////////////////////////////////////////
 
-        // Find the best point in the gap 
         int best_point_idx = 0;
         for (int i = max_gap_begin_idx; i < max_gap_end_idx; i++){
             if (processed_ranges[i] > processed_ranges[best_point_idx]){
@@ -249,46 +271,20 @@ private:
         // best_point_idx = deepest_gap_start_idx + (deepest_gap_end_idx - deepest_gap_start_idx)/2;
         
         std::cout << "Best point index is: " << best_point_idx << " and value is: " << processed_ranges[best_point_idx] << std::endl;
-        // int left_sum = 0;
-        // int right_sum = 0;
-        // for (int i = 1; i < remove_thresh; i++){
-        //     left_sum += processed_ranges[best_point_idx + i];
-        //     right_sum += processed_ranges[best_point_idx - i];
-        // }
-        
-        // std::cout << "Left sum is: " << left_sum << " , Right sum is: " << right_sum << std::endl;
-        // if (left_sum > right_sum){
-        //     // std::cout << "Biased left" << std::endl;
-        //     best_point_idx += remove_thresh*3;
-        // }
-        // else{
-        //     // std::cout << "Biased right" << std::endl;
-        //     best_point_idx -= remove_thresh*3;
-        // }
-        // std::cout << "Left and right of best point: ";
-        // for (int k = -5; k < 6; k++){
-        //     std::cout << processed_ranges[best_point_idx + k] << " ";
-        // } std::cout << std::endl;
 
-        
-        // Publish Drive message
-        if (processed_ranges[best_point_idx] > 5.0){
-            piecewise_speed = 2.0;
-        } 
-        else if (processed_ranges[best_point_idx] < 5.0 && processed_ranges[best_point_idx] > 1.5){
-            piecewise_speed = 1.0;
-        }
-        else{
-            piecewise_speed = 0.5;
-        }
-        best_point_idx += fortyfive_idx; // offset by 45 degrees
+
+        ///////////////////////////////////////////////////////////////////////////////////////
+        // [STEP] Publish Drive message
+        ///////////////////////////////////////////////////////////////////////////////////////
+        piecewise_speed_calc(processed_ranges.data(), best_point_idx);
+
+        best_point_idx += fortyfive_idx; // offset by 45 degrees to get corresp angle
         float steering_angle = corresp_angles_radians[best_point_idx]; // radians
         std::cout << "Steering angle is: " << steering_angle*(180/M_PI) << std::endl;
+
         auto drive_msg = ackermann_msgs::msg::AckermannDriveStamped();
         drive_msg.drive.steering_angle = steering_angle;
-        // drive_msg.drive.speed = 2.0;
         drive_msg.drive.speed = piecewise_speed;
-        
         drive_pub_->publish(drive_msg);
     }
 
