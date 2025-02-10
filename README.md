@@ -1,3 +1,5 @@
+This is my solution for implementing Gap following with clever ideas to help the reactive planner navigate tight turns, and obstacles.
+
 # Lab 4: Follow the Gap
 
 ## I. Learning Goals
