@@ -48,11 +48,11 @@ private:
 
     // tunable parameters
     int window_size = 1; // size of the moving average window
-    // float robs = 0.2; // radius of robot
-    float robs = 0.3; // map2
+    float robs = 0.2; // radius of robot
+    // float robs = 0.3; // map2
     int remove_thresh = 20; // not used right now
     int disparity_thresh = 1.50; // threshold to identify disparity point
-    float disparity_extender_length = 0.25; // length extended from disparity
+    float disparity_extender_length = 0.4; // length extended from disparity
     // float disparity_extender_length = 0.3; // map2
 
     
@@ -136,6 +136,7 @@ private:
     void find_max_gap(float* ranges, int* indice)
     {   
         // Return the start index & end index of the max gap in free_space_ranges
+        // Implemented inside callback itself
         return;
     }
 
@@ -144,22 +145,32 @@ private:
         // Start_i & end_i are start and end indicies of max-gap range, respectively
         // Return index of best point in ranges
 	    // Naive: Choose the furthest point within ranges and go there
+        // Implemented inside callback itself
         return;
     }
 
-    void piecewise_speed_calc(float* ranges, int best_idx)
+    void piecewise_speed_calc(float* ranges, int best_idx, float steer_angle)
     {
         // Return speed of car based on the farthest distance we're aiming for
         // can be deepet point in the max length gap or the deepest gap's center
-        std::cout << "value at best index is: " << ranges[best_idx] << std::endl;
-        if (ranges[best_idx] > 5.0){
-            piecewise_speed = 1.0;
-        } 
-        else if (ranges[best_idx] < 5.0 && ranges[best_idx] > 1.5){
-            piecewise_speed = 0.9;
+        // steer angle not used right now, might be useful so kept as input
+        // if (ranges[best_idx] >= 5.0){
+        //     piecewise_speed = 3.5;
+        // } 
+        // else if (ranges[best_idx] < 5.0 && ranges[best_idx] > 1.5){
+        //     piecewise_speed = 2.0;
+        // }
+        // else{
+        //     piecewise_speed = 1.0;
+        // }
+        if (ranges[best_idx] >= 7.0) {
+            piecewise_speed = 8.0;
+        }
+        else if (ranges[best_idx] < 7.0 && ranges[best_idx] > 1.5){
+            piecewise_speed = (5.0/7.0) * ranges[best_idx];
         }
         else{
-            piecewise_speed = 0.3;
+            piecewise_speed = 1.0;
         }
         std::cout << "Piecewise speed is: " << piecewise_speed << std::endl;
 
@@ -218,7 +229,7 @@ private:
 
         for (int i=1;i<processed_ranges.size();i++) {
             end_idx = i;
-            if (processed_ranges[i] == 0.0 && (end_idx - begin_idx) > 1){
+            if (processed_ranges[i] < 2.0 && (end_idx - begin_idx) > 1){
 
                 gap_indices.push_back(std::make_pair(begin_idx, end_idx));
                 begin_idx = i + 1;
@@ -268,6 +279,7 @@ private:
                 best_point_idx = i;
             }
         }
+        best_point_idx = max_gap_begin_idx + ((max_gap_end_idx - max_gap_begin_idx)/2);
         // best_point_idx = deepest_gap_start_idx + (deepest_gap_end_idx - deepest_gap_start_idx)/2;
         
         std::cout << "Best point index is: " << best_point_idx << " and value is: " << processed_ranges[best_point_idx] << std::endl;
@@ -276,12 +288,12 @@ private:
         ///////////////////////////////////////////////////////////////////////////////////////
         // [STEP] Publish Drive message
         ///////////////////////////////////////////////////////////////////////////////////////
-        piecewise_speed_calc(processed_ranges.data(), best_point_idx);
-
-        best_point_idx += fortyfive_idx; // offset by 45 degrees to get corresp angle
-        float steering_angle = corresp_angles_radians[best_point_idx]; // radians
+        
+        // best_point_idx += fortyfive_idx; // offset by 45 degrees to get corresp angle
+        float steering_angle = corresp_angles_radians[best_point_idx + fortyfive_idx]; // radians
         std::cout << "Steering angle is: " << steering_angle*(180/M_PI) << std::endl;
-
+        piecewise_speed_calc(processed_ranges.data(), best_point_idx, steering_angle);
+        
         auto drive_msg = ackermann_msgs::msg::AckermannDriveStamped();
         drive_msg.drive.steering_angle = steering_angle;
         drive_msg.drive.speed = piecewise_speed;
