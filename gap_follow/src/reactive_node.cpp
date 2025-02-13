@@ -54,6 +54,7 @@ private:
     int disparity_thresh = 1.50; // threshold to identify disparity point
     float disparity_extender_length = 0.4; // length extended from disparity
     // float disparity_extender_length = 0.3; // map2
+    float threshold_classify_gap = 2.0; // threshold used to identify gap
 
     
     void preprocess_lidar(float* ranges)
@@ -229,7 +230,7 @@ private:
 
         for (int i=1;i<processed_ranges.size();i++) {
             end_idx = i;
-            if (processed_ranges[i] < 2.0 && (end_idx - begin_idx) > 1){
+            if (processed_ranges[i] < threshold_classify_gap && (end_idx - begin_idx) > 1){
 
                 gap_indices.push_back(std::make_pair(begin_idx, end_idx));
                 begin_idx = i + 1;
