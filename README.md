@@ -2,7 +2,7 @@ This is my solution for implementing Gap following with clever ideas to help the
 
 The repository for this lab is: [here](https://github.com/f1tenth-cmu/f1tenth_lab4)
 
-Race 1 Video:
+Race 1 Video: (Best time around the track: 7.8s)
 
 https://github.com/user-attachments/assets/9ed36436-6dc0-4670-9869-3a3bf235cc7e
 
