@@ -47,7 +47,7 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
     rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr drive_pub_;
 
-    float lookahead_distance = 0.7; // meters
+    float lookahead_distance = 0.9; // meters
     float Kp = 1.0; // proportional gain
 
     vector<float> find_closest_waypoint(float x, float y, float theta) // theta in radians
@@ -176,7 +176,7 @@ private:
         // TODO: publish drive message, don't forget to limit the steering angle.
         auto drive_msg = ackermann_msgs::msg::AckermannDriveStamped();
         drive_msg.drive.steering_angle = steering_angle;
-        drive_msg.drive.speed = 1.5;
+        drive_msg.drive.speed = 1.0;
         drive_pub_->publish(drive_msg);
     }
 
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
 {
 
     // reading from csv file to store our waypoints
-    ifstream file("/home/vulcan/f1tenth/labs/waypoints/logs/anotherloop.csv");
+    ifstream file("/home/vulcan/f1tenth/labs/waypoints/logs/smoothed_mimic_locker.csv");
 
     if (!file.is_open()) {
         cout << "Check file path" << endl;
