@@ -14,7 +14,7 @@ class WaypointsViz(Node):
         self.trajectory = []
 
         try:
-            with open('/home/vulcan/f1tenth/labs/waypoints/logs/smoothed_mimic_locker.csv', 'r') as f:
+            with open('/home/vulcan/f1tenth/labs/waypoints/logs/manual.csv', 'r') as f:
                 reader = csv.reader(f)
                 for row in reader:
                     self.trajectory.append([float(row[0]), float(row[1])])
@@ -30,7 +30,9 @@ class WaypointsViz(Node):
         marker_array = MarkerArray()
 
         # print(len(self.trajectory))
-        self.sampled_down_trajectory  = self.trajectory[::20]
+        self.sampled_down_trajectory  = self.trajectory[::1]
+        temp1 = self.sampled_down_trajectory[0][0]
+        temp2 = self.sampled_down_trajectory[0][1]
         
         for i, point in enumerate(self.sampled_down_trajectory):
             marker = Marker()
@@ -39,6 +41,8 @@ class WaypointsViz(Node):
             marker.id = i
             marker.type = Marker.SPHERE
             marker.action = Marker.ADD
+            # marker.pose.position = Point(x=point[1] - temp2 + 0.2, y=point[0] - temp1 - 3.1, z=0.0)
+            # marker.pose.position = Point(x=point[0] - 6.1, y= -20-point[1], z=0.0)
             marker.pose.position = Point(x=point[0], y=point[1], z=0.0)
             marker.pose.orientation.x = 0.0
             marker.pose.orientation.y = 0.0
