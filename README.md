@@ -13,4 +13,5 @@ https://github.com/user-attachments/assets/9ed36436-6dc0-4670-9869-3a3bf235cc7e
 ## Pure Pursuit + SLAM
 
 A better readme coming soon...
+Race 2 Video: coming on 29th March
 
