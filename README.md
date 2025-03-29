@@ -15,3 +15,22 @@ https://github.com/user-attachments/assets/9ed36436-6dc0-4670-9869-3a3bf235cc7e
 A better readme coming soon...
 Race 2 Video: coming on 29th March
 
+### Pure Pursuit Node
+
+Subscribers:
+
+1. Odometry topic (nav_msgs::msg::Odometry): wheel odometry/particle filter
+
+Publishers:
+
+1. Speed and heading angle to drive (ackermann_msgs::msg::AckermannDriveStampe)
+2. Visualize corners on Rviz (visualization_msgs::msg::MarkerArray)
+3. Visualize lookahead waypoint (visualization_msgs::msg::Marker)
+
+### Helper Scripts
+
+1. **viz_waypoints.py** : Visualize entire waypoints from csv in Rviz.
+2. **waypoint_logger.py** : Log waypoints in (x, y, theta, speed) format in csv file reading from a topic.
+3. **smoother.py** : Downsampling and smoothing waypoints using slerp.
+
+
