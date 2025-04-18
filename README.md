@@ -12,7 +12,10 @@ https://github.com/user-attachments/assets/9ed36436-6dc0-4670-9869-3a3bf235cc7e
 
 ## Pure Pursuit + SLAM
 
-A better readme coming soon...
+Simulation Implementation (Includes raceline optimization):
+
+https://github.com/user-attachments/assets/1ad3f71d-b392-4c74-ac99-230474470a85
+
 Race 2 Video: coming on 29th March
 
 ### Pure Pursuit Node
@@ -32,5 +35,14 @@ Publishers:
 1. **viz_waypoints.py** : Visualize entire waypoints from csv in Rviz.
 2. **waypoint_logger.py** : Log waypoints in (x, y, theta, speed) format in csv file reading from a topic.
 3. **smoother.py** : Downsampling and smoothing waypoints using slerp.
+
+## RRT Implementation
+
+Using RRT for informed planning and to avoid obstacles. Also experiemnting with RRT*, Kinodynamic RRt, etc.
+
+Simulation Implementation (RRT with local occupancy grid, speed = 2m/s):
+
+https://github.com/user-attachments/assets/ecb37405-a819-4465-889c-1e105e1896d6
+
 
 
