@@ -41,6 +41,9 @@ public:
         drive_pub_ = this->create_publisher<ackermann_msgs::msg::AckermannDriveStamped>(
             drive_topic, 10);
 
+        goal_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
+            "next_wp_tofollow", 10, std::bind(&PurePursuit::wp_callback, this, std::placeholders::_1));
+
         identify_corners();
         
     }
@@ -50,6 +53,7 @@ private:
     string odom_sim_topic = "/ego_racecar/odom";
     string drive_topic = "/drive";
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
     // rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pf_sub_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
     rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr drive_pub_;
@@ -59,6 +63,7 @@ private:
     float Kp = 1.0; // proportional gain
     float closest_wp_idx = 0;
     float car_vel = 0;
+    vector<float> next_waypoint;
 
     vector<pair<int, int>> corners; //identifying corners ranges
     // vector<int> corner_idx; // corner indexes
@@ -94,6 +99,7 @@ private:
         
 
         // Move forward from the closest point while checking distance closer to lookahead
+        // Edit: look at the entire waypoints list to allow for loops
         for (int j = 0; j < raw_waypoints.size(); j++) {
             float dist = sqrt(pow(x - raw_waypoints[j][0], 2) + pow(y - raw_waypoints[j][1], 2));
             if (abs(dist - lookahead_distance) < 0.1) {
@@ -223,6 +229,15 @@ private:
     }
     
     // void pose_callback(const geometry_msgs::msg::PoseStamped::ConstPtr pose_msg)
+    void wp_callback(const geometry_msgs::msg::PoseStamped::ConstPtr pose_msg)
+    {
+        // cout << "Received waypoint" << endl;
+        // cout << "x: " << pose_msg->pose.position.x << " y: " << pose_msg->pose.position.y << endl;
+        float x = pose_msg->pose.position.x;
+        float y = pose_msg->pose.position.y;
+        next_waypoint = {x, y};
+    }
+    
     void pose_callback(const nav_msgs::msg::Odometry::ConstPtr pose_msg)
     {
         
@@ -230,11 +245,12 @@ private:
         float curr_x = pose_msg->pose.pose.position.x;
         float curr_y = pose_msg->pose.pose.position.y;
         float curr_theta = get_heading(pose_msg->pose.pose.orientation);
-        vector<float> next_waypoint = find_closest_waypoint(curr_x, curr_y, curr_theta);
+        // vector<float> next_waypoint = find_closest_waypoint(curr_x, curr_y, curr_theta);
+        
 
         // visualize the waypoint
-        waypoint_viz(next_waypoint);  
-        corner_viz(raw_waypoints, corner_idx);  
+        // waypoint_viz(next_waypoint);  
+        // corner_viz(raw_waypoints, corner_idx);  
         
         // for (int i = 0; i < corner_idx.size(); i++) {
         //     if (closest_wp_idx == corner_idx[i]) {
@@ -248,11 +264,13 @@ private:
         // }
 
         // TODO: transform goal point to vehicle frame of reference
-        float x_rel = next_waypoint[0] - curr_x;
-        float y_rel = next_waypoint[1] - curr_y;
+        // float x_rel = next_waypoint[0] - curr_x;
+        // float y_rel = next_waypoint[1] - curr_y;
         // this transformation is needed to get y lateral from car for curvature
-        float x_car = cos(curr_theta) * x_rel + sin(curr_theta) * y_rel;
-        float y_car = -sin(curr_theta) * x_rel + cos(curr_theta) * y_rel;
+        // float x_car = cos(curr_theta) * x_rel + sin(curr_theta) * y_rel;
+        // float y_car = -sin(curr_theta) * x_rel + cos(curr_theta) * y_rel;
+        float x_car = next_waypoint[0];
+        float y_car = next_waypoint[1];
 
         // cout << "Relative x: " << x_car << " Relative y: " << y_car << endl;
 
@@ -315,8 +333,8 @@ int main(int argc, char **argv)
     //     raw_waypoints[i][0] = temp_raw_waypoints[i][1] - temp2 + 0.2;
     //     raw_waypoints[i][1] = temp_raw_waypoints[i][0] - temp1 - 3.1;
     // }
-    cout << "Checking: " << raw_waypoints[0][0] << " " << raw_waypoints[0][1] << endl;
-    cout << "Size: " << raw_waypoints.size() << endl;
+    // cout << "Checking: " << raw_waypoints[0][0] << " " << raw_waypoints[0][1] << endl;
+    // cout << "Size: " << raw_waypoints.size() << endl;
     // cout << "Checking: " << raw_waypoints[100][0] << " " << raw_waypoints[100][1] << " " << raw_waypoints[100][2] <<  endl;
     
     // for (int i = 0; i < orientation_in_wps.size() - 50; i++) {
